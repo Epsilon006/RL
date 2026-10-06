@@ -30,9 +30,8 @@ from megatron.core.utils import StragglerDetector
 
 from nemo_rl.algorithms.loss.interfaces import LossFunction, LossType
 from nemo_rl.data.multimodal_utils import PACKED_MULTIMODAL_FIELDS, PackedTensor
-from nemo_rl.data_plane.codec import pad_batch
 from nemo_rl.data_plane.schema import MICROBATCH_PADDED_FIELDS, OPD_FULL_FIELDS
-from nemo_rl.distributed.batched_data_dict import BatchedDataDict
+from nemo_rl.distributed.batched_data_dict import BatchedDataDict, pad_nested_fields
 from nemo_rl.distributed.model_utils import _get_tokens_on_this_cp_rank
 from nemo_rl.models.megatron.alignment import (
     get_fp8_token_alignment,
@@ -151,7 +150,9 @@ def make_processed_microbatch_iterator(
     pack_sequences = cfg["sequence_packing"]["enabled"]
 
     for data_dict in raw_iterator:
-        pad_batch(data_dict, MICROBATCH_PADDED_FIELDS, data_dict["input_ids"].shape[1])
+        pad_nested_fields(
+            data_dict, MICROBATCH_PADDED_FIELDS, data_dict["input_ids"].shape[1]
+        )
         # Move to GPU
         data_dict = data_dict.to("cuda")
 
