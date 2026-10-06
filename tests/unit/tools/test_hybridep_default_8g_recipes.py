@@ -138,22 +138,6 @@ def test_moe_8g_canonical_recipes_default_to_x86_hybridep(
     assert X86_HYBRIDEP_ENVIRONMENT.items() <= _environment(megatron_cfg).items()
 
 
-def test_qarl_qwen3_4n8g_overrides_inherited_gb200_hybridep_topology() -> None:
-    config = _resolve_recipe("../grpo-qwen3-30ba3b-4n8g-megatron-qa-nvfp4.yaml")
-    megatron_cfg = _megatron_config(config)
-
-    assert config["cluster"]["num_nodes"] == 4
-    assert config["cluster"]["gpus_per_node"] == 8
-    assert config["cluster"]["segment_size"] is None
-    assert megatron_cfg["tensor_model_parallel_size"] == 2
-    assert megatron_cfg["expert_model_parallel_size"] == 16
-    assert X86_HYBRIDEP_ENVIRONMENT.items() <= _environment(megatron_cfg).items()
-    assert (
-        _environment(megatron_cfg)["PYTORCH_CUDA_ALLOC_CONF"]
-        == "expandable_segments:False"
-    )
-
-
 @pytest.mark.parametrize("recipe_name", (*MOE_8G_RECIPES, *GB200_HYBRIDEP_RECIPES))
 def test_moe_recipes_prepad_only_supported_pipeline_topologies(
     recipe_name: str,

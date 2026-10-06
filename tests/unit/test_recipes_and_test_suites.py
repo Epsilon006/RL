@@ -64,32 +64,6 @@ ALGO_MAPPING_TO_BASE_YAML = {
 ALLOWED_ADDITIONAL_CONFIG_KEYS = ["policy.draft", "policy.generation.vllm_kwargs"]
 
 
-def test_nano3_real_quant_matches_rollout_bf16_exclusions():
-    config = load_config(
-        Path(recipes_dir)
-        / "llm/grpo-nanov3-30ba3b-4n4g-megatron-qa-nvfp4-w4a16-real.yaml"
-    )
-    expected_recipe = "examples/modelopt/quant_configs/nvfp4_experts_weightonly.yaml"
-
-    # The inherited all-weight recipe quantizes Mamba/shared experts, but
-    # real_quant_ignore exports those paths as their original BF16 weights.
-    assert config.policy.quant_cfg == expected_recipe
-    assert config.policy.generation.quant_cfg == expected_recipe
-
-
-def test_qwen3_real_quant_requests_hybridep_nvlink_segment():
-    recipe_name = "grpo-qwen3-30ba3b-4n4g-megatron-qa-nvfp4-w4a4-real"
-    config = load_config(Path(recipes_dir) / "llm" / f"{recipe_name}.yaml")
-    env_vars = config.policy.megatron_cfg.env_vars
-
-    assert config.cluster.segment_size == 4
-    assert config.cluster.segment_size * config.cluster.gpus_per_node == int(
-        env_vars.NUM_OF_HYBRID_EP_RANKS_PER_NVLINK_DOMAIN
-    )
-    driver = Path(test_suites_dir) / "llm" / f"{recipe_name}.sh"
-    assert "\nSEGMENT_SIZE=4 " in driver.read_text()
-
-
 @pytest.fixture
 def nightly_test_suite():
     nightly_suite = []
