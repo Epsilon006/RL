@@ -6,6 +6,7 @@ source "$SCRIPT_DIR/common.env"
 # ===== BEGIN CONFIG =====
 NUM_NODES=4
 GPUS_PER_NODE=4
+SEGMENT_SIZE=4  # Keep the 16 HybridEP ranks within one NVLink domain.
 STEPS_PER_RUN=2
 MAX_STEPS=2
 NUM_RUNS=$(( (MAX_STEPS + STEPS_PER_RUN - 1) / STEPS_PER_RUN ))
