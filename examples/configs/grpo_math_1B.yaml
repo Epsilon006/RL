@@ -189,6 +189,9 @@ policy:
   
   megatron_cfg:
     enabled: false
+    # Match vLLM 0.29's GLM-5.2 DSA Indexer Q/K FP8 round points. This is
+    # restricted to the BF16, 128-head-dim, interleaved RoPE64 layout.
+    dsa_indexer_fp8_qdq: false
     # Arbitrary overrides applied recursively to the Megatron Bridge model
     # provider before model instantiation. Do not duplicate first-class fields.
     model_overrides: {}

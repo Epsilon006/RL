@@ -46,6 +46,7 @@ policy:
     enabled: false
   megatron_cfg:
     enabled: true
+    dsa_indexer_fp8_qdq: true
     empty_unused_memory_level: 2
     activation_checkpointing: true
     tensor_model_parallel_size: 2

@@ -92,6 +92,7 @@ from nemo_rl.models.megatron.draft.step_state import (
     DraftStepPayload,
     DraftStepState,
 )
+from nemo_rl.models.megatron.glm_dsa_fp8_qdq import enable_glm52_dsa_fp8_qdq
 from nemo_rl.models.megatron.pipeline_parallel import (
     broadcast_loss_metrics_from_last_stage,
     broadcast_obj_from_pp_rank,
@@ -740,6 +741,12 @@ class MegatronPolicyWorkerImpl(
 
         self.mcore_state = model_and_optimizer_state.state
         self.model = model_and_optimizer_state.model
+        if config["megatron_cfg"].get("dsa_indexer_fp8_qdq"):
+            patched_indexers = enable_glm52_dsa_fp8_qdq(self.model)
+            log.info(
+                "Enabled GLM-5.2 DSA FP8 QDQ on %d local Indexer modules",
+                patched_indexers,
+            )
         self.optimizer = model_and_optimizer_state.optimizer
         self.scheduler = model_and_optimizer_state.scheduler
         self.checkpointing_context = model_and_optimizer_state.checkpointing_context

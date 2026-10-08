@@ -375,6 +375,10 @@ class MegatronCheckpointConfig(TypedDict, total=False):
 class MegatronConfig(TypedDict):
     enabled: Literal[True]
     env_vars: NotRequired[dict[str, str] | None]
+    # Simulate vLLM 0.29's GLM-5.2 DSA Indexer Q/K E4M3+UE8M0
+    # preprocessing. Valid only for the BF16, RoPE64 GLM-5.2 layout.
+    # Recommended default: false.
+    dsa_indexer_fp8_qdq: NotRequired[bool]
     # Arbitrary model-provider attributes applied recursively to the Megatron
     # Bridge model config before model instantiation. Keys must match configurable
     # provider fields and must not duplicate first-class megatron_cfg fields.

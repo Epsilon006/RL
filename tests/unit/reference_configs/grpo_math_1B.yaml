@@ -191,6 +191,7 @@ policy:
 
   megatron_cfg:
     enabled: false
+    dsa_indexer_fp8_qdq: false
     model_overrides: {}
     checkpoint:
       async_save: true
