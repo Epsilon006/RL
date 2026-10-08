@@ -1,0 +1,125 @@
+defaults: ./vlm_grpo-supervl3p5-unified-teachers-ready-first-32n4g.yaml
+cluster:
+  num_nodes: 8
+  segment_size: 2
+data:
+  max_input_seq_length: 8192
+  train:
+  - data_path: /data/deepcad/gym/train.dimensioned.sorted.jsonl
+    dataset_name: NemoGymDataset
+    env_name: nemo_gym
+    processor: nemo_gym_data_processor
+    prompt_file: null
+    system_prompt_file: null
+async_rl:
+  _override_: true
+  sampler:
+    name: in_order
+    max_lookahead_versions: 1
+  max_inflight_prompts: 8
+  max_buffered_rollouts: 64
+  min_groups_for_streaming_train: 4
+  diagnostics: true
+  stall_watchdog:
+    gym_subprocess_check: true
+    interval_s: 30
+    stall_timeout_s: 600
+    stall_action: warn
+data_plane:
+  simple:
+    num_storage_units: 8
+env:
+  _override_: true
+  should_use_nemo_gym: true
+  should_log_nemo_gym_responses: true
+  should_mask_flagged_samples: true
+  nemo_gym:
+    config_paths:
+    - responses_api_models/vllm_model/configs/vllm_model_for_training.yaml
+    - resources_servers/deepcad/configs/deepcad-hsg.yaml
+    skip_venv_if_present: true
+    uv_venv_dir: /data/deepcad/gym/venvs
+    nemo_gym_log_dir: ${logger.log_dir}/nemo_gym
+    port_range_low: 5000
+    port_range_high: 5999
+    policy_max_input_tokens: 8192
+    pad_dynamic_image_shapes: true
+    is_trajectory_collection: false
+    tokenizer_config:
+      name: ${policy.model_name}
+      chat_template: ${policy.model_name}/chat_template.jinja
+      chat_template_kwargs:
+        enable_thinking: true
+        truncate_history_thinking: false
+    deepcad:
+      resources_servers:
+        deepcad:
+          reference_root: /data/deepcad/gym/references
+          sandbox_image: /data/deepcad/gym/cadquery-2.8.0.sqsh
+          max_concurrency: 8
+          execution_timeout_s: 60
+          geometry_timeout_s: 120
+    deepcad_simple_agent:
+      responses_api_agents:
+        simple_agent:
+          max_steps: 1
+    policy_model:
+      responses_api_models:
+        vllm_model:
+          uses_reasoning_parser: true
+          extra_body:
+            chat_template_kwargs:
+              enable_thinking: true
+grpo:
+  max_num_steps: 100
+  max_num_epochs: 1
+  num_prompts_per_step: 4
+  num_generations_per_prompt: 4
+policy:
+  model_name: /data/models/Nemotron-3-Nano-Omni-30B-A3B-Reasoning-BF16
+  tokenizer:
+    name: ${policy.model_name}
+    chat_template: ${policy.model_name}/chat_template.jinja
+  max_total_sequence_length: 16384
+  train_global_batch_size: 16
+  generation_batch_size: 16
+  generation:
+    model_name: ${policy.model_name}
+    max_new_tokens: 4096
+    colocated:
+      resources:
+        num_nodes: 4
+    vllm_cfg:
+      max_model_len: 16384
+      http_server_serving_chat_kwargs:
+        chat_template: ${policy.model_name}/chat_template.jinja
+    vllm_kwargs:
+      allowed_local_media_path: /data/deepcad
+      max_num_batched_tokens: 16384
+      max_num_seqs: 16
+      limit_mm_per_prompt:
+        image: 3
+        video: 0
+  megatron_cfg:
+    context_parallel_size: 1
+    expert_model_parallel_size: 4
+    train_iters: ${grpo.max_num_steps}
+    scheduler:
+      lr_decay_iters: ${grpo.max_num_steps}
+      lr_warmup_iters: 2
+  sequence_packing:
+    train_mb_tokens: 8192
+    logprob_mb_tokens: 8192
+checkpointing:
+  checkpoint_dir: /data/deepcad/gym/runs/nano-omni-difficulty/checkpoints
+  save_period: 10
+logger:
+  log_dir: /data/deepcad/gym/runs/nano-omni-difficulty/logs
+  wandb:
+    project: rohitkumarj-cad-rl
+    name: nano-omni-cad-difficulty-dimensioned
+    id: ${oc.env:CAD_RL_RUN_ID}
+    entity: ${oc.env:CAD_RL_WANDB_ENTITY,nvidia}
+token_capture:
+  capture_dir: ${logger.log_dir}/gym_token_capture
+  control_auth_token: ${oc.env:CAD_RL_CAPTURE_TOKEN}

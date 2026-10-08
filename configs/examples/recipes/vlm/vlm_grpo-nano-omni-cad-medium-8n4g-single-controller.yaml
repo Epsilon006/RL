@@ -1,0 +1,23 @@
+defaults: ./vlm_grpo-nano-omni-cad-difficulty-8n4g-single-controller.yaml
+data:
+  train:
+  - data_path: /data/deepcad/gym/medium/train.dimensioned.sorted.jsonl
+    dataset_name: NemoGymDataset
+    env_name: nemo_gym
+    processor: nemo_gym_data_processor
+    prompt_file: null
+    system_prompt_file: null
+env:
+  nemo_gym:
+    port_range_low: 6000
+    port_range_high: 6999
+    deepcad:
+      resources_servers:
+        deepcad:
+          reference_root: /data/deepcad/gym/medium/references
+checkpointing:
+  checkpoint_dir: /data/deepcad/gym/runs/nano-omni-medium/checkpoints
+logger:
+  log_dir: /data/deepcad/gym/runs/nano-omni-medium/logs
+  wandb:
+    name: nano-omni-cad-medium-dimensioned
