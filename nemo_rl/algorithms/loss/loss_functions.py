@@ -611,7 +611,6 @@ class ClippedPGLossFn(LossFunction):
                 "curr_logprobs_unfiltered", curr_logprobs
             )
 
-        mask = token_mask * sample_mask.unsqueeze(-1)
         full_metrics = self.metrics_level == "full"
         need_importance_weights = (
             full_metrics or self.use_importance_sampling_correction
@@ -621,6 +620,15 @@ class ClippedPGLossFn(LossFunction):
         # This avoids computing prev_logprobs upstream
         if self.force_on_policy_ratio:
             prev_logprobs = curr_logprobs.detach()
+
+        # Exclude any additional support mismatches in the current forward.
+        # Keep the supplied global denominator rather than renormalizing each
+        # microbatch independently after these loss-local exclusions.
+        token_mask = token_mask * ~(
+            torch.isneginf(curr_logprobs) | torch.isneginf(prev_logprobs)
+        )
+        sample_mask = sample_mask * token_mask.bool().any(dim=-1)
+        mask = token_mask * sample_mask.unsqueeze(-1)
 
         seq_error_metrics = {}
         if self.seq_logprob_error_in_loss:
@@ -640,19 +648,20 @@ class ClippedPGLossFn(LossFunction):
             mask = token_mask * sample_mask.unsqueeze(-1)
             seq_error_metrics["seq_logprob_error_valid_tokens"] = mask.sum().item()
             seq_error_metrics["seq_logprob_error_valid_seqs"] = sample_mask.sum().item()
-            # A rejected nonfinite logprob must not poison a zero-weight loss.
-            curr_logprobs = torch.where(mask.bool(), curr_logprobs, 0.0)
             prev_logprobs = curr_logprobs.detach()
-            generation_logprobs = torch.where(mask.bool(), generation_logprobs, 0.0)
-            if self.reference_policy_kl_penalty != 0:
-                curr_logprobs_unfiltered = torch.where(
-                    mask.bool(),
-                    data.get("curr_logprobs_unfiltered", next_token_logprobs),
-                    0.0,
-                )
-                reference_policy_logprobs = torch.where(
-                    mask.bool(), data["reference_policy_logprobs"][:, 1:], 0.0
-                )
+
+        # Sanitize excluded operands before exponentials and ratios: masking
+        # afterward cannot prevent 0 * inf from poisoning loss or diagnostics.
+        curr_logprobs = torch.where(mask.bool(), curr_logprobs, 0.0)
+        prev_logprobs = torch.where(mask.bool(), prev_logprobs, 0.0)
+        generation_logprobs = torch.where(mask.bool(), generation_logprobs, 0.0)
+        if self.reference_policy_kl_penalty != 0:
+            curr_logprobs_unfiltered = torch.where(
+                mask.bool(), curr_logprobs_unfiltered, 0.0
+            )
+            reference_policy_logprobs = torch.where(
+                mask.bool(), reference_policy_logprobs, 0.0
+            )
 
         # Calculate KL regularization.
         if self.reference_policy_kl_penalty != 0:

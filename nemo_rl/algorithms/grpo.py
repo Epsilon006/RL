@@ -2900,17 +2900,24 @@ def compute_and_apply_seq_logprob_error_masking(
 
     Args:
         train_data: Training data dict containing token_mask, sample_mask,
-                   prev_logprobs, and generation_logprobs. If masking is applied,
-                   sample_mask will be updated in-place.
+                   prev_logprobs, and generation_logprobs. Tokenless rows are
+                   excluded from sample_mask before optional threshold filtering.
         rewards: Reward tensor for computing statistics on masked sequences.
         seq_logprob_error_threshold: If set, mask sequences with mult_prob_error
-                                    exceeding this threshold. If None, only compute metrics.
+                                    exceeding this threshold. None disables threshold
+                                    filtering, but sample validity still applies.
 
     Returns:
         Dict with keys: max_seq_mult_prob_error, mean_seq_mult_prob_error,
         min_seq_mult_prob_error, max/mean/min_seq_mult_prob_error_after_mask,
         num_masked_seqs, masked_correct_pct
     """
+    # Top-k/top-p filtering can leave a row without any training targets.
+    # Exclude it before the driver computes global valid-sample counts.
+    train_data["sample_mask"] = train_data["sample_mask"] * train_data["token_mask"][
+        :, 1:
+    ].bool().any(dim=-1)
+
     # Compute sequence-level logprob error metrics (always)
     token_mask = train_data["token_mask"][:, 1:]
     sample_mask = train_data["sample_mask"]
