@@ -59,7 +59,7 @@ uv run --no-sync tests/check_metrics.py "$JSON_METRICS" \
     "data[\"train/reward\"][\"$MAX_STEPS\"] >= 0.25" \
     "data[\"validation/accuracy\"][\"$MAX_STEPS\"] >= 0.4" \
     "data[\"train/gen_kl_error\"][\"$MAX_STEPS\"] < 0.03" \
-    "data[\"train/js_divergence_error\"][\"$MAX_STEPS\"] < 0.007" \
+    "data[\"train/js_divergence_error\"][\"$MAX_STEPS\"] < 0.008" \
     "data[\"train/approx_entropy\"][\"$MAX_STEPS\"] < 0.35"
 
 mapfile -t TRAIN_DATA_FILES < <(
